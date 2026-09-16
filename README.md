@@ -41,6 +41,14 @@ a repo that only has one:
 $ dotconv to-linkfile legacy-install.sh -o dotfiles.linkfile
 ```
 
+Check a linkfile without generating anything, e.g. from a pre-commit
+hook or CI:
+
+```
+$ dotconv validate dotfiles.linkfile
+ok: 14 entries
+```
+
 ## Strict by default
 
 By default `dotconv` refuses to guess. A linkfile target must be

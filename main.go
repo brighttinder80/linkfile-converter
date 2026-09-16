@@ -15,6 +15,11 @@ func usage() {
 Usage:
   dotconv to-script   [--lenient] [-o out.sh] <linkfile>
   dotconv to-linkfile [--lenient] [-o out.linkfile] <script.sh>
+  dotconv validate    [--lenient] <linkfile>
+
+validate parses a linkfile and reports errors without producing any
+output file. It's meant for a pre-commit hook or CI check on a
+dotfiles repo that keeps its linkfile as the source of truth.
 
 By default both directions are strict: anything that doesn't parse
 cleanly, or looks unsafe (a symlink target that isn't absolute or
@@ -30,14 +35,19 @@ func main() {
 		os.Exit(2)
 	}
 	cmd := os.Args[1]
-	if cmd != "to-script" && cmd != "to-linkfile" {
+	switch cmd {
+	case "to-script", "to-linkfile", "validate":
+	default:
 		usage()
 		os.Exit(2)
 	}
 
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	lenient := fs.Bool("lenient", false, "skip malformed or unsafe lines instead of failing")
-	output := fs.String("o", "", "output file (default: stdout)")
+	var output *string
+	if cmd != "validate" {
+		output = fs.String("o", "", "output file (default: stdout)")
+	}
 	fs.Parse(os.Args[2:])
 
 	if fs.NArg() != 1 {
@@ -51,6 +61,16 @@ func main() {
 		os.Exit(1)
 	}
 	defer in.Close()
+
+	if cmd == "validate" {
+		entries, err := ParseLinkfile(in, *lenient, os.Stderr)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "dotconv:", err)
+			os.Exit(1)
+		}
+		fmt.Printf("ok: %d entries\n", len(entries))
+		return
+	}
 
 	out := os.Stdout
 	if *output != "" {
